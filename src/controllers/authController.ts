@@ -1,71 +1,54 @@
 import { type Request, type Response } from "express";
-import { AuthService } from "../services/authService";
+import authService, { type AuthService } from "../services/authService";
+import { BadException, NotFoundError } from "../error/ErrorTypes";
 
 export class AuthController {
-  static async signin(req: Request, res: Response) {
+  constructor(private readonly authSrv: AuthService) {}
+  public signin = async (req: Request, res: Response) => {
     const formBody = req.body;
-    const response = await AuthService.signin(formBody);
+    const response = await this.authSrv.signin(formBody);
 
-    if (response?.error) {
-      return res.status(500).json({
+    if (response instanceof BadException) {
+      return res.status(response.statusCode).json({
         message: response?.message,
-        error: response?.error,
+        error: response?.name,
       });
     }
 
-    if (!response?.data) {
-      return res.status(401).json({
+    if (response instanceof NotFoundError) {
+      return res.status(response.statusCode).json({
         message: response?.message,
         error: "Invalid credentials",
       });
     }
 
-    const cookieOptions = {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production" ? true : false,
-      sameSite: true,
-      maxAge: 24 * 60 * 60 * 1000,
-      signed: true,
-    };
-    return res
-      .status(200)
-      .cookie("userId", response?.data?.id, cookieOptions)
-      .json({
-        message: response?.message,
-        data: {
-          id: response?.data?.id,
-          username: response?.data?.username,
-          email: response?.data?.email,
-        },
-      });
-  }
-  static async signup(req: Request, res: Response) {
+    return res.status(200).json({
+      message: response?.message,
+      token: response?.token,
+      data: {
+        id: response?.data?.id,
+        username: response?.data?.username,
+        email: response?.data?.email,
+      },
+    });
+  };
+  public signup = async (req: Request, res: Response) => {
     const formBody = req.body;
-    const response = await AuthService.signup(formBody);
+    const response = await this.authSrv.signup(formBody);
 
-    if (response?.error) {
-      return res.status(500).json({
+    if (response instanceof BadException) {
+      return res.status(response.statusCode).json({
         message: response?.message,
-        error: response?.error,
+        error: response?.name,
       });
     }
 
-    const cookieOptions = {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production" ? true : false,
-      sameSite: true,
-      maxAge: 24 * 60 * 60 * 1000,
-    };
-
-    return res
-      .status(201)
-      .cookie("userId", response?.data?.id)
-      .json({
-        messsage: response?.message,
-        data: {
-          username: response?.data?.username,
-          email: response?.data?.email,
-        },
-      });
-  }
+    return res.status(201).json({
+      messsage: "User Signup Successful",
+    });
+  };
 }
+
+const authController = new AuthController(authService);
+
+export default authController;

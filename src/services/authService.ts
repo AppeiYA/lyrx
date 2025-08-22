@@ -1,11 +1,19 @@
 import type { LoginDto, SignUpDto } from "../dtos/authDtos";
 import argon2 from "argon2";
 import { PrismaClient, Prisma } from "../../generated/prisma";
+import { signToken } from "../utils/jwt";
+import { BadException, NotFoundError } from "../error/ErrorTypes";
+import type { UserDataDto } from "../dtos/userDtos";
 
 const prisma = new PrismaClient();
 
-export class AuthService {
-  static async signup(body: SignUpDto) {
+export interface AuthService {
+  signup(body: SignUpDto): Promise<void | BadException>;
+  signin(body: LoginDto): Promise<any | NotFoundError>;
+}
+
+export class AuthServiceImpl implements AuthService {
+  async signup(body: SignUpDto): Promise<void | BadException> {
     try {
       const { username, email, password } = body;
       const hash = await argon2.hash(password);
@@ -18,35 +26,20 @@ export class AuthService {
       });
 
       if (!user) {
-        throw new Error("User creation failed");
+        throw new BadException("User creation failed");
       }
-
-      return {
-        message: "User signup successful",
-        data: {
-          id: user.id,
-          username: user.username,
-          email: user.email,
-        },
-      };
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code == "P2002") {
-          return {
-            message: "User already exists",
-            error: "A user with this username or email already exists",
-          };
+          return new BadException("User Already Exist");
         }
       }
 
-      return {
-        message: "Database Error",
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
+      return new BadException("Database Error");
     }
   }
 
-  static async signin(body: LoginDto) {
+  async signin(body: LoginDto): Promise<any | NotFoundError> {
     try {
       const { username, email, password } = body;
 
@@ -60,23 +53,29 @@ export class AuthService {
       });
 
       if (!user) {
-        return {
-          message: "User Not Found",
-          error: "User with this username or email does not exist",
-        };
+        return new NotFoundError("User not found");
       }
 
       const isPasswordValid = await argon2.verify(user.password, password);
 
       if (!isPasswordValid) {
-        return {
-          message: "Invalid Password",
-          error: "Password provided is incorrect",
-        };
+        return new BadException("Invalid Password");
+      }
+
+      // sign token for user
+      const tokens = signToken({
+        userId: user.id,
+        email: user.email,
+        tokenVersion: user.tokenVersion,
+      });
+
+      if(tokens instanceof Error){
+        return 
       }
 
       return {
         message: "Login Successful",
+        token: tokens?.token,
         data: {
           id: user.id,
           username: user.username,
@@ -91,3 +90,6 @@ export class AuthService {
     }
   }
 }
+
+const authService = new AuthServiceImpl();
+export default authService;
