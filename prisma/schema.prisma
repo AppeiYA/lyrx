@@ -14,13 +14,82 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum LyricsSource {
+  GENIUS
+  CUSTOM
+  NONE
+}
+
+enum ArtistRole {
+  MAIN
+  FEATURED
+}
+
+
 model User {
   id        String   @id @default(cuid())
   username  String   @unique
   email     String   @unique
   password  String
   tokenVersion Int @default(0)
+  role String @default("user")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  favorites Favorite[]
   @@map("users")
+}
+
+model Favorite {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  song      Song     @relation(fields: [songId], references: [id])
+  songId    String
+  createdAt DateTime @default(now())
+  @@map("favorites")
+}
+
+model Song {
+  id           String        @id @default(uuid())
+  spotifyId    String        @unique
+  title        String
+  geniusId     String?       
+  lyricsSource LyricsSource  @default(NONE)
+  customLyrics String?       
+
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  favorites    Favorite[]
+  songArtists  SongArtist[]  // link to artists
+
+  @@map("songs")
+}
+
+model Artist {
+  id        String       @id @default(uuid())
+  spotifyId String?      @unique
+  name      String       @unique
+
+  songArtists SongArtist[]  // link to songs
+
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@map("artists")
+}
+
+// join table with extra metadata
+model SongArtist {
+  id       String     @id @default(uuid())
+  songId   String
+  artistId String
+  role     ArtistRole? @default(FEATURED) // MAIN or FEATURED
+
+  song   Song   @relation(fields: [songId], references: [id])
+  artist Artist @relation(fields: [artistId], references: [id])
+
+  @@unique([songId, artistId]) // prevent duplicates
+  @@map("song_artists")
 }

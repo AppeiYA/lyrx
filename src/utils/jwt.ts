@@ -1,4 +1,4 @@
-import jwt from "jsonwebtoken";
+import jwt, { type JwtPayload } from "jsonwebtoken";
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -9,6 +9,7 @@ dotenv.config();
 interface signTokenPayload {
   userId: string;
   email: string;
+  role: string;
   tokenVersion: number;
 }
 
@@ -20,13 +21,17 @@ if (!secret) {
   throw new Error("JWT secret is not defined");
 }
 
-export const signToken = (payload: signTokenPayload) => {
+export const signToken = (payload: signTokenPayload, refreshToken: boolean) => {
   try {
-    const token = jwt.sign(payload, secret, {expiresIn: "15s"});
-    if(!token){
-        return new Error("Error signing token");
+    const token = jwt.sign(payload, secret, { expiresIn: "15m" });
+    if (!token) {
+      return new Error("Error signing token");
     }
-    return {token, refreshToken: signRefreshToken(payload)};
+    let newRefreshToken = null;
+    if(refreshToken){
+      newRefreshToken = signRefreshToken(payload);
+    }
+    return { token, newRefreshToken};
   } catch (error) {
     return new Error("Error signing token: " + error);
   }
@@ -34,18 +39,29 @@ export const signToken = (payload: signTokenPayload) => {
 
 export const signRefreshToken = (payload: signTokenPayload) => {
   try {
-    const refreshToken = jwt.sign(payload, refresh_secret, {expiresIn: '7d'});
+    const refreshToken = jwt.sign(payload, refresh_secret, { expiresIn: "7d" });
     return refreshToken;
   } catch (error) {
     return new Error("Error signing token: " + error);
   }
 };
 
-export const verifyToken = (token: string) => {
+export const verifyRefreshToken = (token: string): {valid: boolean; expired: boolean; decoded: any}=>{
+  try{
+    const decoded = jwt.verify(token, refresh_secret) as JwtPayload;
+    return{valid: true, expired: false, decoded}
+  }catch(error){
+    return {valid: false, expired: true, decoded: null}
+  }
+}
+
+export const verifyToken = (
+  token: string
+): { valid: boolean; expired: boolean; decoded: any } => {
   try {
-    const decoded = jwt.verify(token, secret);
-    return decoded;
+    const decoded = jwt.verify(token, secret) as JwtPayload;
+    return { valid: true, expired: false, decoded };
   } catch (error: any) {
-    throw new Error("Error verifying token: " + error?.message);
+    return { valid: false, expired: true, decoded: null };
   }
 };

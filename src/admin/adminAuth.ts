@@ -1,12 +1,11 @@
 import type { NextFunction, Request, Response } from "express";
 import { verifyToken } from "../utils/jwt";
-// import jwt from "jsonwebtoken"
 
 export interface AuthenticatedRequest extends Request {
   user?: any;
 }
 
-export const AuthMiddleware = async (
+export const AdminMiddleware = async (
   req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
@@ -25,6 +24,18 @@ export const AuthMiddleware = async (
   }
   if (!decoded.valid || decoded.expired) {
     return res.status(401).json({ message: "Invalid or expired token" });
+  }
+  const { role } = decoded?.decoded;
+  if (!role) {
+    return res.status(401).json({ message: "Invalid or expired token" });
+  }
+  if (role != "admin") {
+    return res
+      .status(401)
+      .json({
+        error: "Unauthorized access",
+        message: "User cannot access endpoint",
+      });
   }
   req.user = decoded?.decoded;
 

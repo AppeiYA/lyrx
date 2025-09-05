@@ -4,6 +4,8 @@ import { type Request, type Response } from "express";
 import authRouter from "./routes/auth.routes";
 import cookieParser from "cookie-parser";
 import userRouter from "./routes/user.routes";
+import songRouter from "./song/routes/songs.routes";
+import adminRouter from "./admin/admin.routes";
 
 const app: Application = express();
 
@@ -20,7 +22,9 @@ app.get("/", (req: Request, res: Response) => {
 });
 
 app.use("/api/auth", authRouter);
-app.use("/api/user", userRouter)
+app.use("/api/user", userRouter);
+app.use("/api/admin", adminRouter);
+app.use("/api/songs", songRouter);
 
 app.use((req: Request, res: Response) => {
   res.type("text/plain");

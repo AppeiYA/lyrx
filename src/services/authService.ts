@@ -1,7 +1,7 @@
 import type { LoginDto, SignUpDto } from "../dtos/authDtos";
 import argon2 from "argon2";
 import { PrismaClient, Prisma } from "../../generated/prisma";
-import { signToken } from "../utils/jwt";
+import { signToken, verifyRefreshToken, verifyToken } from "../utils/jwt";
 import { BadException, NotFoundError } from "../error/ErrorTypes";
 import type { UserDataDto } from "../dtos/userDtos";
 
@@ -10,6 +10,8 @@ const prisma = new PrismaClient();
 export interface AuthService {
   signup(body: SignUpDto): Promise<void | BadException>;
   signin(body: LoginDto): Promise<any | NotFoundError>;
+  refreshToken(token: string): Promise<any | BadException>;
+  logout(token: string): Promise<void | BadException>;
 }
 
 export class AuthServiceImpl implements AuthService {
@@ -63,19 +65,24 @@ export class AuthServiceImpl implements AuthService {
       }
 
       // sign token for user
-      const tokens = signToken({
-        userId: user.id,
-        email: user.email,
-        tokenVersion: user.tokenVersion,
-      });
+      const tokens = signToken(
+        {
+          userId: user.id,
+          email: user.email,
+          role: user.role,
+          tokenVersion: user.tokenVersion,
+        },
+        true
+      );
 
-      if(tokens instanceof Error){
-        return 
+      if (tokens instanceof Error) {
+        return new BadException("tokenization error");
       }
 
       return {
         message: "Login Successful",
         token: tokens?.token,
+        refreshToken: tokens?.newRefreshToken,
         data: {
           id: user.id,
           username: user.username,
@@ -87,6 +94,57 @@ export class AuthServiceImpl implements AuthService {
         message: "Signin failed",
         error: error instanceof Error ? error.message : "Unknown error",
       };
+    }
+  }
+
+  async refreshToken(token: string): Promise<any | BadException> {
+    try {
+      const JwtPayload = verifyRefreshToken(token);
+
+      const user = await prisma.user.findUnique({
+        where: { id: JwtPayload?.decoded?.userId },
+      });
+      if (!user || user.tokenVersion !== JwtPayload?.decoded?.tokenVersion) {
+        return new BadException("Invalid refresh token");
+      }
+
+      const newAccessToken = signToken({
+        userId: user.id,
+        email: user.email,
+        role: user.role,
+        tokenVersion: user.tokenVersion,
+      }, false);
+
+      return { token: newAccessToken };
+    } catch (error: any) {
+      return new BadException("Invalid or Unexpected Refresh Token");
+    }
+  }
+
+  async logout(token: string): Promise<void | BadException> {
+    try{
+      const JwtPayload = verifyRefreshToken(token);
+      if(!JwtPayload.valid || JwtPayload.expired){
+        return new BadException("Token expired. User already logged out");
+      }
+
+      const userId = JwtPayload?.decoded?.userId;
+
+      if(!userId){
+        return new BadException("Unauthorized logout request");
+      };
+
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          tokenVersion: {
+            increment: 1, // bump version
+          },
+        },
+      });
+      
+    }catch(error){
+      return new BadException("Error Logging Out");
     }
   }
 }
