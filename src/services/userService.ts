@@ -1,5 +1,7 @@
 import { BadException, NotFoundError } from "../error/ErrorTypes";
 import { PrismaClient, Prisma } from "../../generated/prisma";
+import dal from "../config/dal";
+import cuid from "cuid";
 const prisma = new PrismaClient();
 
 interface UserProfile {
@@ -13,6 +15,7 @@ export interface UserService {
   getUserProfile(userId: string): Promise<UserProfile | NotFoundError>;
   getPublicProfile(username: string): Promise<any | NotFoundError>;
   updateProfile(userId: string, payload: any): Promise<any | BadException>;
+  addFavorite(userId: string, spotifySongId: string): Promise<void | BadException>;
 }
 
 export class UserServiceImpl implements UserService {
@@ -76,6 +79,57 @@ export class UserServiceImpl implements UserService {
       return { updatedUser };
     } catch (error) {
       return new BadException("Unable to update profile" + error);
+    }
+  }
+
+  async addFavorite(
+    userId: string,
+    spotifySongId: string
+  ): Promise<void | BadException> {
+    try {
+      // Check if song exists in DB
+      const checkSong = await dal.One(
+        `SELECT * FROM songs WHERE "spotifyId" = $1`,
+        [spotifySongId]
+      );
+
+      let storedSongId: string;
+
+      if (checkSong instanceof NotFoundError) {
+        // Store song if not found
+        const now = new Date().toISOString();
+        const newSongId = cuid();
+        const song = await dal.One(
+          `INSERT INTO songs (id, "spotifyId", title, "lyricsSource", "updatedAt", "createdAt") 
+         VALUES ($1, $2, $3, $4, $5, $6) RETURNING id;`,
+          [newSongId, spotifySongId, "unknown", "NONE", now, now]
+        );
+
+        if (song instanceof BadException)
+          return new BadException("Error storing fetched song");
+        if (song instanceof NotFoundError)
+          return new NotFoundError("Error storing fetched song");
+
+        storedSongId = song.id;
+      } else {
+        storedSongId = checkSong.id; // Use existing song id
+      }
+
+      // Insert into favorites
+      const favorite = await dal.None(
+        `INSERT INTO favorites (id, "userId", "songId", "createdAt")
+       VALUES ($1, $2, $3, $4)`,
+        [cuid(), userId, storedSongId, new Date().toISOString()]
+      );
+
+      if (favorite instanceof BadException) {
+        return new BadException(favorite.message);
+      }
+
+      console.log(`Favorite added: user=${userId}, song=${storedSongId}`);
+    } catch (err) {
+      console.error("Error:", err);
+      return new BadException("Unable to add favorite");
     }
   }
 }

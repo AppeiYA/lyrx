@@ -69,6 +69,21 @@ export class UserController {
       },
     });
   };
+
+  public addFavorite = async (req: AuthenticatedRequest, res: Response) => {
+    const { userId } = req.user;
+    const { spotifySongId } = req.body;
+
+    const response = await this.userSrv.addFavorite(userId, spotifySongId);
+    if (response instanceof BadException) {
+      return res.status(response.statusCode).json({
+        message: response.message,
+      });
+    }
+    return res.status(201).json({
+      message: "Song added to favorite",
+    });
+  };
 }
 
 const userController = new UserController(userService);

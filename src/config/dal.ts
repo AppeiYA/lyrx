@@ -2,24 +2,24 @@ import { BadException, NotFoundError } from "../error/ErrorTypes";
 import pool from "./db";
 
 export interface DAL {
-  any(query: string, params: []): Promise<any | BadException>;
-  None(query: string, params: []): Promise<null | BadException>;
-  One(query: string, params: []): Promise<any | BadException | NotFoundError>;
+  any(query: string, params?: any[]): Promise<any | BadException>;
+  None(query: string, params?: any[]): Promise<null | BadException>;
+  One(query: string, params?: any[]): Promise<any | BadException | NotFoundError>;
   OneOrMany(
     query: string,
-    params: [string]
+    params?: any[]
   ): Promise<any | BadException | NotFoundError>;
 }
 
 export class dalImpl implements DAL {
-  async any(query: string, params: []): Promise<any | BadException> {
+  async any(query: string, params?: any[]): Promise<any | BadException> {
     const { rows } = await pool.query(query, params);
     if (!rows) {
       return new BadException("Error accessing data");
     }
     return rows;
   }
-  async None(query: string, params: []): Promise<null | BadException> {
+  async None(query: string, params?: any[]): Promise<null | BadException> {
     const { rows } = await pool.query(query, params);
     if (rows.length > 0) {
       return new BadException(`Expected no rows but got ${rows.length} rows`);
@@ -28,7 +28,7 @@ export class dalImpl implements DAL {
   }
   async One(
     query: string,
-    params: []
+    params?: any[]
   ): Promise<any | BadException | NotFoundError> {
     const { rows } = await pool.query(query, params);
     if (rows.length === 0) {
@@ -42,7 +42,7 @@ export class dalImpl implements DAL {
   }
   async OneOrMany(
     query: string,
-    params: [string]
+    params?: any[]
   ): Promise<any | BadException | NotFoundError> {
     const { rows } = await pool.query(query, params);
     if (rows.length === 0) {

@@ -8,7 +8,7 @@ const authRouter: Router = express.Router();
 
 authRouter.post('/login', validate(loginSchema), authController.signin)
 authRouter.post('/signup', validate(SignUpSchema), authController.signup)
-authRouter.get('/refreshToken', authController.refreshToken)
+authRouter.post('/refreshToken', authController.refreshToken)
 authRouter.post('/logout', authController.logout)
 
 export default authRouter;

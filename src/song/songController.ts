@@ -59,7 +59,6 @@ export class SongController {
         message: "song id required",
       });
     }
-    console.log(id);
     const response = await this.songSrv.getSong(token, id);
 
     if (response instanceof BadException) {
@@ -102,7 +101,7 @@ export class SongController {
       //   artist: item.track.artists.map((a: any) => a.name).join(", "),
       //   popularity: item.track.popularity,
       // })),
-      data: response,
+      data: response.slice(0,10),
     });
   };
 

@@ -44,8 +44,8 @@ export class AuthController {
 
     if (response instanceof BadException) {
       return res.status(response.statusCode).json({
-        message: response?.message,
-        error: response?.name,
+        error: response?.message,
+        errorname: response?.name,
       });
     }
 

@@ -6,6 +6,7 @@ import cookieParser from "cookie-parser";
 import userRouter from "./routes/user.routes";
 import songRouter from "./song/routes/songs.routes";
 import adminRouter from "./admin/admin.routes";
+import cors from 'cors';
 
 const app: Application = express();
 
@@ -16,6 +17,11 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use(cookieParser(process.env.COOKIE_SECRET));
+app.use(cors({
+  origin: 'http://localhost:3000',
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  credentials: true
+}))
 
 app.get("/", (req: Request, res: Response) => {
   res.send("Lyrx App with Typescript and express is running!");

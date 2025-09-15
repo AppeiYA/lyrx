@@ -2,7 +2,10 @@ import express, { type Router } from "express";
 import { AuthMiddleware } from "../middlewares/AuthMiddleware";
 import userController, { UserController } from "../controllers/userController";
 import { validate } from "../validators/Validate";
-import { UpdateProfileSchema } from "../validators/schemas/UserSchemas";
+import {
+  AddToFavoriteSchema,
+  UpdateProfileSchema,
+} from "../validators/schemas/UserSchemas";
 
 const userRouter: Router = express.Router();
 
@@ -20,6 +23,14 @@ userRouter.post(
 userRouter.get(
   "/public/profile/:username",
   userController.getUserPublicProfile
+);
+
+// add song to favorites
+userRouter.post(
+  "/add-favorite",
+  AuthMiddleware,
+  validate(AddToFavoriteSchema),
+  userController.addFavorite
 );
 
 export default userRouter;
