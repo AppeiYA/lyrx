@@ -84,6 +84,60 @@ export class UserController {
       message: "Song added to favorite",
     });
   };
+
+  public followUser = async (req: AuthenticatedRequest, res: Response) => {
+    const { userId } = req.user;
+    const { target_user_id } = req.params;
+    if (!target_user_id) {
+      res.status(400).json({
+        error: "Supply user id",
+      });
+    }
+    const response = await this.userSrv.followUser(target_user_id!, userId);
+
+    if (response instanceof NotFoundError) {
+      return res.status(response.statusCode).json({
+        error: response.message,
+      });
+    }
+    if (response instanceof BadException) {
+      return res.status(response.statusCode).json({
+        error: response.message,
+      });
+    }
+
+    return res.status(200).json({
+      message: "Follow successful",
+      detail: `Followed user : ${target_user_id}`,
+    });
+  };
+
+  public unfollowUser = async (req: AuthenticatedRequest, res: Response) => {
+    const { userId } = req.user;
+    const { target_user_id } = req.params;
+    if (!target_user_id) {
+      res.status(400).json({
+        error: "Supply user id",
+      });
+    }
+    const response = await this.userSrv.unfollowUser(target_user_id!, userId);
+
+    if (response instanceof NotFoundError) {
+      return res.status(response.statusCode).json({
+        error: response.message,
+      });
+    }
+    if (response instanceof BadException) {
+      return res.status(response.statusCode).json({
+        error: response.message,
+      });
+    }
+
+    return res.status(200).json({
+      message: "Unfollow successful",
+      detail: `Unfollowed user : ${target_user_id}`,
+    });
+  };
 }
 
 const userController = new UserController(userService);

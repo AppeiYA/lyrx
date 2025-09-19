@@ -15,7 +15,18 @@ export interface UserService {
   getUserProfile(userId: string): Promise<UserProfile | NotFoundError>;
   getPublicProfile(username: string): Promise<any | NotFoundError>;
   updateProfile(userId: string, payload: any): Promise<any | BadException>;
-  addFavorite(userId: string, spotifySongId: string): Promise<void | BadException>;
+  addFavorite(
+    userId: string,
+    spotifySongId: string
+  ): Promise<void | BadException>;
+  followUser(
+    userId: string,
+    followerId: string
+  ): Promise<void | NotFoundError | BadException>;
+  unfollowUser(
+    targetUserId: string,
+    followerId: string
+  ): Promise<void | NotFoundError | BadException>;
 }
 
 export class UserServiceImpl implements UserService {
@@ -31,7 +42,6 @@ export class UserServiceImpl implements UserService {
     const { id, username, email, createdAt } = user;
     return { id, username, email, createdAt };
   }
-
   async getPublicProfile(username: string): Promise<any | NotFoundError> {
     const user = await prisma.user.findFirst({
       where: { username: username },
@@ -47,7 +57,6 @@ export class UserServiceImpl implements UserService {
       favorites: user.favorites,
     };
   }
-
   async updateProfile(
     userId: string,
     payload: any
@@ -81,7 +90,6 @@ export class UserServiceImpl implements UserService {
       return new BadException("Unable to update profile" + error);
     }
   }
-
   async addFavorite(
     userId: string,
     spotifySongId: string
@@ -131,6 +139,99 @@ export class UserServiceImpl implements UserService {
       console.error("Error:", err);
       return new BadException("Unable to add favorite");
     }
+  }
+  async followUser(
+    targetUserId: string,
+    followerId: string
+  ): Promise<void | NotFoundError | BadException> {
+    try {
+      // check if user exists
+      const user = await dal.One(
+        `SELECT id, username 
+      FROM users 
+      WHERE id = $1`,
+        [targetUserId]
+      );
+      if (user instanceof NotFoundError) {
+        return new NotFoundError("User not found");
+      }
+      // check if user already followed
+      let checkFollow;
+      try {
+        checkFollow = await dal.One(
+          `SELECT user_id, follower_id
+          FROM follows
+          WHERE user_id = $1
+          AND follower_id = $2`,
+          [targetUserId, followerId]
+        );
+      } catch (err) {
+        if (err instanceof NotFoundError) {
+          checkFollow = null; // not following
+        } else {
+          throw err; // bubble up unexpected errors
+        }
+      }
+
+      if (checkFollow) {
+        return new BadException("Already follows user");
+      }
+
+      await dal.None(
+        `INSERT INTO follows (user_id, follower_id) 
+      VALUES ($1, $2)`,
+        [targetUserId, followerId]
+      );
+    } catch (err: any) {
+      console.log("error:", err);
+      return new BadException("An error occured");
+    }
+  }
+  async unfollowUser(
+    targetUserId: string,
+    followerId: string
+  ): Promise<void | NotFoundError | BadException> {
+    try {
+      // check if user exists
+      const user = await dal.One(
+        `SELECT id, username 
+      FROM users 
+      WHERE id = $1`,
+        [targetUserId]
+      );
+      if (user instanceof NotFoundError) {
+        return new NotFoundError("User not found");
+      }
+
+      // check if user already followed
+      let checkFollow;
+      try {
+        checkFollow = await dal.One(
+          `SELECT user_id, follower_id
+          FROM follows
+          WHERE user_id = $1
+          AND follower_id = $2`,
+          [targetUserId, followerId]
+        );
+      } catch (err) {
+        if (err instanceof NotFoundError) {
+          checkFollow = null; // not following
+        } else {
+          throw err; // bubble up unexpected errors
+        }
+      }
+
+      if (!checkFollow) {
+        return new BadException("Not following user");
+      }
+
+      await dal.None(
+        `DELETE FROM follows
+        WHERE user_id = $1
+        AND follower_id = $2`,
+        [targetUserId, followerId]
+      );
+    } catch (err) {}
   }
 }
 

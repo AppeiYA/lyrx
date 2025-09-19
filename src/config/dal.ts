@@ -32,10 +32,10 @@ export class dalImpl implements DAL {
   ): Promise<any | BadException | NotFoundError> {
     const { rows } = await pool.query(query, params);
     if (rows.length === 0) {
-      return new NotFoundError("Expected one row but got none");
+      throw new NotFoundError("Expected one row but got none");
     }
     if (rows.length > 1) {
-      return new BadException("Got more errors than expected");
+      throw new BadException("Got more errors than expected");
     }
 
     return rows[0];
