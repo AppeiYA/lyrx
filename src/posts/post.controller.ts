@@ -39,23 +39,32 @@ export class PostController {
     });
   };
 
-  public likePost = async (req: AuthenticatedRequest, res: Response) => {
-    const item_type = "post";
-    const { post_id } = req.params;
-    if (!post_id) {
+  public likeItem = async (req: AuthenticatedRequest, res: Response) => {
+    const { item_type } = req.params;
+    if (!item_type) {
+      return res.status(400).json({
+        error: "Item type is required",
+      });
+    }
+    const { item_id } = req.params;
+    if (!item_id) {
       return res.status(400).json({
         error: "No item Id",
       });
     }
 
-    if (!isUUID(post_id)) {
+    if (!isUUID(item_id)) {
       return res.status(400).json({
         error: "invalid item_id",
       });
     }
     const userId = req.user?.userId;
 
-    const response = await this.postSrv.likeItem(userId, post_id!, item_type);
+    const response = await this.postSrv.likeItem(
+      userId,
+      item_id!,
+      item_type as "post" | "comment"
+    );
 
     if (response instanceof BadException) {
       return res.status(response.statusCode).json({
@@ -70,7 +79,7 @@ export class PostController {
     }
 
     return res.status(200).json({
-      message: "Liked post",
+      message: `Liked ${item_type}`,
       Likes: response,
     });
   };

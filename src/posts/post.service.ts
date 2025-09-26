@@ -55,45 +55,56 @@ export class PostServiceImpl implements PostService {
     item_type: "post" | "comment"
   ): Promise<Number | BadException | NotFoundError> {
     // check if user exists
-    const user = await dal.One(
-      `SELECT username 
+    try {
+      const user = await dal.One(
+        `SELECT username 
       FROM users 
       WHERE id = $1`,
-      [userId]
-    );
+        [userId]
+      );
 
-    if (user instanceof NotFoundError) {
-      return new NotFoundError("User not found");
-    }
+      if (user instanceof NotFoundError) {
+        return new NotFoundError("User not found");
+      }
 
-    // check if item exists. if it does, like
-    const item = await dal.One(
-      `SELECT id 
+      // check if item exists. if it does, like
+      const item = await dal.One(
+        `SELECT id 
         FROM ${item_type}s 
         WHERE id = $1`,
-      [item_id]
-    );
+        [item_id]
+      );
 
-    if (item instanceof NotFoundError) {
-      return new NotFoundError("Liked Item does not exist");
-    }
+      if (item instanceof NotFoundError) {
+        return new NotFoundError("Liked Item does not exist");
+      }
 
-    await dal.None(
-      `INSERT INTO likes (item_id, user_id, item_type)
+      await dal.None(
+        `INSERT INTO likes (item_id, user_id, item_type)
         VALUES ($1, $2, $3)
         ON CONFLICT (item_id, user_id, item_type) DO NOTHING`,
-      [item_id, userId, item_type]
-    );
+        [item_id, userId, item_type]
+      );
 
-    // return updated number of likes
-    var result = await dal.One(
-      `SELECT COUNT(*) AS total_likes
+      // return updated number of likes
+      var result = await dal.One(
+        `SELECT COUNT(*) AS total_likes
       FROM likes
       WHERE item_id = $1`,
-      [item_id]
-    );
+        [item_id]
+      );
 
-    return parseInt(result.total_likes, 10);
+      return parseInt(result.total_likes, 10);
+    } catch (err) {
+      if (err instanceof BadException) {
+        return new BadException(err.message);
+      } else if (err instanceof NotFoundError) {
+        return new NotFoundError(err.message);
+      } else {
+        console.log(err);
+        return new BadException("Serer side error");
+      }
+    }
   }
 
   async commentOnItem(
@@ -101,11 +112,14 @@ export class PostServiceImpl implements PostService {
   ): Promise<any | BadException | NotFoundError> {
     try {
       // check if item exists
-      await dal.One(
+      const item = await dal.One(
         `SELECT * FROM ${payload.item_type}s
       WHERE id = $1`,
         [payload.item_id]
       );
+      if (item instanceof NotFoundError) {
+        return new NotFoundError("Item commented not found");
+      }
 
       // if item exists
       // comment on item
@@ -121,16 +135,17 @@ export class PostServiceImpl implements PostService {
         ]
       );
 
-      if (comment instanceof BadException) {
-        return new BadException(comment.message);
+      if (comment instanceof NotFoundError) {
+        return new NotFoundError(comment.message);
       }
 
       console.log(comment);
       return comment;
-      
     } catch (err) {
       if (err instanceof NotFoundError) {
         return new NotFoundError(err.message);
+      } else if (err instanceof BadException) {
+        return new BadException(err.message);
       } else {
         console.log("Error", err);
         return new BadException("An error occured on server");

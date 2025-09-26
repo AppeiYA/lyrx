@@ -100,7 +100,6 @@ export class UserServiceImpl implements UserService {
         `SELECT * FROM songs WHERE "spotifyId" = $1`,
         [spotifySongId]
       );
-
       let storedSongId: string;
 
       if (checkSong instanceof NotFoundError) {

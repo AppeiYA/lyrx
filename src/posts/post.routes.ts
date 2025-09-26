@@ -7,6 +7,7 @@ import {
   LikeParamSchema,
   PostSchema,
 } from "../validators/schemas/post.schemas";
+import { validateItemTypes } from "../utils/validateItemType";
 
 const postRouter: Router = express.Router();
 
@@ -21,15 +22,13 @@ postRouter.post(
 // delete post
 
 // like
-// like post
 postRouter.post(
-  "/post/:post_id/like",
+  "/:item_type/:item_id/like",
   AuthMiddleware,
   validateLikeParam(LikeParamSchema),
-  postController.likePost
+  validateItemTypes,
+  postController.likeItem
 );
-// like comment
-
 // comment
 postRouter.post(
   "/comment/:post_id",
