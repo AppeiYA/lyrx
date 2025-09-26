@@ -4,7 +4,10 @@ import pool from "./db";
 export interface DAL {
   any(query: string, params?: any[]): Promise<any | BadException>;
   None(query: string, params?: any[]): Promise<null | BadException>;
-  One(query: string, params?: any[]): Promise<any | BadException | NotFoundError>;
+  One(
+    query: string,
+    params?: any[]
+  ): Promise<any | BadException | NotFoundError>;
   OneOrMany(
     query: string,
     params?: any[]
@@ -20,11 +23,16 @@ export class dalImpl implements DAL {
     return rows;
   }
   async None(query: string, params?: any[]): Promise<null | BadException> {
-    const { rows } = await pool.query(query, params);
-    if (rows.length > 0) {
-      return new BadException(`Expected no rows but got ${rows.length} rows`);
+    try {
+      const { rows } = await pool.query(query, params);
+      if (rows.length > 0) {
+        return new BadException(`Expected no rows but got ${rows.length} rows`);
+      }
+      return null;
+    } catch (err) {
+      console.log("Database error: ", err);
+      return new BadException("Error with storing values in database");
     }
-    return null;
   }
   async One(
     query: string,

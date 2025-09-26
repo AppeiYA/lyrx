@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS likes(
     FOREIGN KEY(user_id) REFERENCES users(id)
 );
 
-CREATE TABLE IF NOT EXISTS comment(
+CREATE TABLE IF NOT EXISTS comments(
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id TEXT NOT NULL,
     item_id TEXT NOT NULL, 
