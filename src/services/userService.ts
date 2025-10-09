@@ -164,8 +164,11 @@ export class UserServiceImpl implements UserService {
           AND follower_id = $2`,
           [targetUserId, followerId]
         );
+        if (checkFollow instanceof NotFoundError) {
+          checkFollow = null; // not following
+        }
       } catch (err) {
-        if (err instanceof NotFoundError) {
+        if (err instanceof BadException) {
           checkFollow = null; // not following
         } else {
           throw err; // bubble up unexpected errors

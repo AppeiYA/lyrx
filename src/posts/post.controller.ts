@@ -5,6 +5,7 @@ import postService from "./post.service";
 import { CommentDto, PostDto } from "./post.dto";
 import { BadException, NotFoundError } from "../error/ErrorTypes";
 import { isUUID } from "../utils/isUUID";
+import { io } from "../..";
 
 export class PostController {
   constructor(private readonly postSrv: PostService) {}
@@ -34,8 +35,11 @@ export class PostController {
       });
     }
 
+    io.emit("newPost", response);
+
     return res.status(200).json({
       message: "Post created successfully",
+      ...response,
     });
   };
 
@@ -83,6 +87,51 @@ export class PostController {
       Likes: response,
     });
   };
+  public unlikeItem = async (req:AuthenticatedRequest, res: Response) =>{
+    const { item_type } = req.params;
+    if (!item_type) {
+      return res.status(400).json({
+        error: "Item type is required",
+      });
+    }
+    const { item_id } = req.params;
+    if (!item_id) {
+      return res.status(400).json({
+        error: "No item Id",
+      });
+    }
+
+    if (!isUUID(item_id)) {
+      return res.status(400).json({
+        error: "invalid item_id",
+      });
+    }
+    const userId = req.user?.userId;
+
+    const response = await this.postSrv.unlikeItem(
+      userId,
+      item_id!,
+      item_type as "post" | "comment"
+    );
+
+    if (response instanceof BadException) {
+      return res.status(response.statusCode).json({
+        error: response.message,
+      });
+    }
+
+    if (response instanceof NotFoundError) {
+      return res.status(response.statusCode).json({
+        error: response.message,
+      });
+    }
+
+    return res.status(200).json({
+      message: `Unliked ${item_type}`,
+      Likes: response,
+    });
+
+  }
 
   public commentOnPost = async (req: AuthenticatedRequest, res: Response) => {
     const payload = new CommentDto(req.body);
@@ -128,6 +177,77 @@ export class PostController {
         ...response,
       },
     });
+  };
+  public commentOnComment = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ) => {
+    const payload = new CommentDto(req.body);
+    const { userId } = req.user;
+    const item_type: string = "comment";
+    const { comment_id } = req.params;
+
+    if (!comment_id) {
+      return res.status(400).json({
+        error: "No item Id",
+      });
+    }
+
+    if (!isUUID(comment_id)) {
+      return res.status(400).json({
+        error: "invalid item_id",
+      });
+    }
+
+    Object.assign(payload, {
+      item_id: comment_id,
+      userId: userId,
+      item_type: item_type,
+    });
+
+    const response = await this.postSrv.commentOnItem(payload);
+
+    if (response instanceof BadException) {
+      return res.status(response.statusCode).json({
+        error: response.message,
+      });
+    }
+
+    if (response instanceof NotFoundError) {
+      return res.status(response.statusCode).json({
+        error: response.message,
+      });
+    }
+
+    return res.status(200).json({
+      message: "Comment successful",
+      comment: {
+        ...response,
+      },
+    });
+  };
+
+  public getTimelinePosts = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ) => {
+    const { userId } = req.user;
+    const response = await this.postSrv.getTimelinePosts(userId);
+    if(response instanceof NotFoundError){
+      return res.status(response.statusCode).json({
+        error: response.message
+      })
+    }
+    if(response instanceof BadException
+    ){
+      return res.status(response.statusCode).json({
+        error: response.message
+      })
+    }
+    return res.status(200).json({
+      message: "Timeline posts",
+      ...response
+    })
   };
 }
 

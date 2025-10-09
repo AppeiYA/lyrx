@@ -1,1 +1,4 @@
 CREATE TABLE IF NOT EXISTS follows();
+DROP TABLE comments;
+DROP TABLE likes;
+DROP TABLE posts;

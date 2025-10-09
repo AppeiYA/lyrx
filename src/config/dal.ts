@@ -43,7 +43,7 @@ export class dalImpl implements DAL {
       return new NotFoundError("Expected one row but got none");
     }
     if (rows.length > 1) {
-      throw new BadException("Got more errors than expected");
+      throw new BadException("Got more rows than expected");
     }
 
     return rows[0];

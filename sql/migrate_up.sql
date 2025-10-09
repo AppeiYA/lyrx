@@ -20,12 +20,14 @@ CREATE TABLE IF NOT EXISTS posts(
     content TEXT NOT NULL,
     post_image TEXT,
     link TEXT,
+    createdAt TIMESTAMP NOT NULL DEFAULT NOW(),
+    updatedAt TIMESTAMP DEFAULT NOW(),
     FOREIGN KEY(user_id) REFERENCES users(id)
 );
 
-DROP TYPE IF EXISTS item_type_enum;
+-- DROP TYPE IF EXISTS item_type_enum;
 
-CREATE TYPE item_type_enum AS ENUM ('comment', 'post');
+-- CREATE TYPE item_type_enum AS ENUM ('comment', 'post');
 
 
 CREATE TABLE IF NOT EXISTS likes(
@@ -33,6 +35,8 @@ CREATE TABLE IF NOT EXISTS likes(
     user_id TEXT NOT NULL,
     item_id TEXT NOT NULL,
     item_type item_type_enum NOT NULL,
+    createdAt TIMESTAMP NOT NULL DEFAULT NOW(),
+    updatedAt TIMESTAMP DEFAULT NOW(),
     UNIQUE(user_id, item_id, item_type),
     FOREIGN KEY(user_id) REFERENCES users(id)
 );
@@ -44,6 +48,8 @@ CREATE TABLE IF NOT EXISTS comments(
     item_type item_type_enum NOT NULL,
     content TEXT NOT NULL,
     link TEXT,
+    createdAt TIMESTAMP NOT NULL DEFAULT NOW(),
+    updatedAt TIMESTAMP DEFAULT NOW(),
     FOREIGN KEY(user_id) REFERENCES users(id)
 );
 

@@ -29,15 +29,32 @@ postRouter.post(
   validateItemTypes,
   postController.likeItem
 );
-// comment
+// unlike
+postRouter.post(
+  "/:item_type/:item_id/unlike",
+  AuthMiddleware,
+  validateLikeParam(LikeParamSchema),
+  validateItemTypes,
+  postController.unlikeItem
+);
+// comment on post
 postRouter.post(
   "/comment/:post_id",
   AuthMiddleware,
   validate(CommentSchema),
   postController.commentOnPost
 );
+// comment on comment
+postRouter.post(
+  "/comment/:comment_id",
+  AuthMiddleware,
+  validate(CommentSchema),
+  postController.commentOnComment
+);
 // get post
-// get all timeline posts
+// get all timeline posts(posts by followed user)
+postRouter.get("/", AuthMiddleware, postController.getTimelinePosts);
+
 // get all comments
 
 export default postRouter;
