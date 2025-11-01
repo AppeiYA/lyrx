@@ -6,6 +6,8 @@ import { error } from "console";
 
 export class UserController {
   constructor(private readonly userSrv: UserService) {}
+
+  
   public getUserProfile = async (req: AuthenticatedRequest, res: Response) => {
     const { userId } = req.user;
     const response = await this.userSrv.getUserProfile(userId);

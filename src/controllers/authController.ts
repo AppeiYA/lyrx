@@ -2,6 +2,7 @@ import { type Request, type Response } from "express";
 import authService, { type AuthService } from "../services/authService";
 import { BadException, NotFoundError } from "../error/ErrorTypes";
 import { refreshCookieOptions } from "../utils/cookie";
+import passport from "../utils/passport";
 
 export class AuthController {
   constructor(private readonly authSrv: AuthService) {}
@@ -38,6 +39,31 @@ export class AuthController {
         },
       });
   };
+
+  public googleRedirectGenerateJwt = async (req: Request, res: Response) => {
+    if (!req.user) {
+      return res.status(403).json({
+        message: "User not authenticated",
+      });
+    }
+
+    const response = await this.authSrv.generateJwtFromOAuth(req.user);
+
+    if (response instanceof BadException) {
+      const errorMessage = encodeURIComponent(response.message);
+      return res.redirect(`${process.env["FRONTEND_BASE_URL"]}/login?error=${errorMessage}`);
+    }
+
+    const refreshToken: string = response?.refreshToken;
+    const accessToken: string = response?.token;
+
+    res.cookie("jid", refreshToken, refreshCookieOptions);
+
+    return res.redirect(
+      `${process.env["FRONTEND_BASE_URL"]}/auth/callback?token=${accessToken}`
+    );
+  };
+
   public signup = async (req: Request, res: Response) => {
     const formBody = req.body;
     const response = await this.authSrv.signup(formBody);

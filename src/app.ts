@@ -9,16 +9,30 @@ import adminRouter from "./admin/admin.routes";
 import cors from "cors";
 import dotenv from "dotenv";
 import postRouter from "./posts/post.routes";
+import session from "express-session";
+import passport from "./utils/passport";
 
 dotenv.config();
 
 const app: Application = express();
 
-// error request handler
-app.use(errorHandler);
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+app.use(
+  session({
+    secret: process.env["SESSION_SECRET"]!,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env["NODE_ENV"] === "production",
+      maxAge: 1000 * 60 * 60 * 24, // 1 day
+    },
+  })
+);
+
+app.use(passport.initialize());
+app.use(passport.session());
 
 app.use(cookieParser(process.env.COOKIE_SECRET));
 app.use(
@@ -30,7 +44,10 @@ app.use(
 );
 
 app.get("/", (req: Request, res: Response) => {
-  res.send("Lyrx App with Typescript and express is running!");
+  // res.send("Lyrx App with Typescript and express is running!");
+  res.send(
+    '<a href="/api/auth/login/federated/google">Google Authentication</a>'
+  )
 });
 
 app.use("/api/auth", authRouter);
@@ -44,5 +61,8 @@ app.use((req: Request, res: Response) => {
   res.status(404);
   res.send("404 - NOT FOUND");
 });
+
+// error request handler
+app.use(errorHandler);
 
 export default app;
